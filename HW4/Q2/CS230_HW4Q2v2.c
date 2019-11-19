@@ -25,7 +25,7 @@ union semun {
 };
 
 //Function to create and check semaphore set - Thank you to Beej's Guide
-int initsem(key_t key, int nsems)  /* key from ftok() */
+int initsem(key_t key, int nsems)  // key from ftok(), nsems is number of sems we want in the set
 {
     int i;
     union semun arg;
@@ -34,46 +34,46 @@ int initsem(key_t key, int nsems)  /* key from ftok() */
     int semid;
     //Make semaphore set
     semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | 0666);
-	
-    if (semid >= 0) { /* we got it first */
+    
+    //Check if semaphore set has been created by another process
+    if (semid >= 0) { // then we made it first
         sb.sem_op = 1; sb.sem_flg = 0;
         arg.val = 1;
 
         //printf("press return\n"); getchar();
 
         for(sb.sem_num = 0; sb.sem_num < nsems; sb.sem_num++) {
-            /* do a semop() to "free" the semaphores. */
-            /* this sets the sem_otime field, as needed below. */
-            if (semop(semid, &sb, 1) == -1) {
+            // do a semop() to "free" the semaphores
+            if (semop(semid, &sb, 1) == -1) { //if we get an error remove the semaphore set
                 int e = errno;
-                semctl(semid, 0, IPC_RMID); /* clean up */
+                semctl(semid, 0, IPC_RMID);
                 errno = e;
-                return -1; /* error, check errno */
+                return -1;
             }
         }
-
-    } else if (errno == EEXIST) { /* someone else got it first */
+    //Looks like someone else made it first
+    } else if (errno == EEXIST) {
         int ready = 0;
+	//Get the semaphore ID
+        semid = semget(key, nsems, 0);
+        if (semid < 0) return semid; //return error
 
-        semid = semget(key, nsems, 0); /* get the id */
-        if (semid < 0) return semid; /* error, check errno */
-
-        /* wait for other process to initialize the semaphore: */
+        // wait for other process to initialize the semaphore, try 10 times
         arg.buf = &buf;
         for(i = 0; i < 10 && !ready; i++) {
             semctl(semid, nsems-1, IPC_STAT, arg);
-            if (arg.buf->sem_otime != 0) {
+       	    if (arg.buf->sem_otime != 0) { //Sem set is ready
                 ready = 1;
             } else {
                 sleep(1);
             }
         }
-        if (!ready) {
+        if (!ready) {  //Sem set didn't become available, so error out
             errno = ETIME;
             return -1;
         }
     } else {
-        return semid; /* error, check errno */
+        return semid; //Some other error occured (not EEXIST)
     }
 
     return semid;
@@ -159,7 +159,8 @@ int main(int argc, char** argv)
                 perror("initsem");
                 exit(1);
 	}
-	//Set sem full to 16 and empty to 0 
+	//Set all sem full to 16 and empty to 0
+	//nsem for full sems are odd (1,3,5...) and empty are even (2,4,6...), mutex is 0 so leave it alone
 	arg.val = BUFFER_SIZE;
 	for(int i = 1; i < (1+numC*2); i+=2) {
 	    if ((semctl(semid, i, SETVAL, arg)) == -1) {
@@ -181,8 +182,6 @@ int main(int argc, char** argv)
 	else if(pid==0) {
 		printf("The producer is started.\n");
 		char temp_buf;	//internal buffer
-		int r = 0;		//read index
-		int w = 0;		//write index
 		int shmW = 0;
 		char c;
 		FILE *file = fopen("test.txt", "r");
