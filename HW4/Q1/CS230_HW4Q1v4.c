@@ -25,67 +25,69 @@ union semun {
         ushort *array;
 };
 
-int initsem(key_t key, int nsems)  /* key from ftok() - A special thanks to Beej's Guides for this charm */
+//Function to create and check semaphore set - Thank you to Beej's Guide
+int initsem(key_t key, int nsems)  // key from ftok(), nsems is number of sems we want in the set
 {
     int i;
     union semun arg;
     struct semid_ds buf;
     struct sembuf sb;
     int semid;
-
+    //Make semaphore set
     semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | 0666);
-
-    if (semid >= 0) { /* we got it first */
+    
+    //Check if semaphore set has been created by another process
+    if (semid >= 0) { // then we made it first
         sb.sem_op = 1; sb.sem_flg = 0;
         arg.val = 1;
 
-        printf("press return\n"); getchar();
+        //printf("press return\n"); getchar();
 
         for(sb.sem_num = 0; sb.sem_num < nsems; sb.sem_num++) {
-            /* do a semop() to "free" the semaphores. */
-            /* this sets the sem_otime field, as needed below. */
-            if (semop(semid, &sb, 1) == -1) {
+            // do a semop() to "free" the semaphores
+            if (semop(semid, &sb, 1) == -1) { //if we get an error remove the semaphore set
                 int e = errno;
-                semctl(semid, 0, IPC_RMID); /* clean up */
+                semctl(semid, 0, IPC_RMID);
                 errno = e;
-                return -1; /* error, check errno */
+                return -1;
             }
         }
-
-    } else if (errno == EEXIST) { /* someone else got it first */
+    //Looks like someone else made it first
+    } else if (errno == EEXIST) {
         int ready = 0;
+	//Get the semaphore ID
+        semid = semget(key, nsems, 0);
+        if (semid < 0) return semid; //return error
 
-        semid = semget(key, nsems, 0); /* get the id */
-        if (semid < 0) return semid; /* error, check errno */
-
-        /* wait for other process to initialize the semaphore: */
+        // wait for other process to initialize the semaphore, try 10 times
         arg.buf = &buf;
         for(i = 0; i < 10 && !ready; i++) {
             semctl(semid, nsems-1, IPC_STAT, arg);
-            if (arg.buf->sem_otime != 0) {
+       	    if (arg.buf->sem_otime != 0) { //Sem set is ready
                 ready = 1;
             } else {
                 sleep(1);
             }
         }
-        if (!ready) {
+        if (!ready) {  //Sem set didn't become available, so error out
             errno = ETIME;
             return -1;
         }
     } else {
-        return semid; /* error, check errno */
+        return semid; //Some other error occured (not EEXIST)
     }
 
     return semid;
 }
 
+//This is a function to check stdin for input
 int stdin_select(void)
 {
         fd_set rd;
-        struct timeval tv={0};
+        struct timeval tv={0}; //No delay
         int ret;
         FD_ZERO(&rd);
-        FD_SET(STDIN_FILENO, &rd);
+        FD_SET(STDIN_FILENO, &rd); //Looking at stdin
         if(ret=select(1, &rd, NULL, NULL, &tv)==-1) {
                 errno = 0;
         }
@@ -122,7 +124,7 @@ int main()
         mutex_unlock.sem_flg = 0;
 	full_write.sem_num = SEM_FULL;
 	full_write.sem_op = -1;
-	full_write.sem_flg = IPC_NOWAIT;
+	full_write.sem_flg = IPC_NOWAIT; //Need full_write to be non-blocking
 	full_read.sem_num = SEM_FULL;
 	full_read.sem_op = 1;
 	full_read.sem_flg = 0;
@@ -154,14 +156,15 @@ int main()
 		perror("mmap");
 		exit(1);
 	}
-	char *str = (char *)shmid; //cast shmid to char type for pointer arithmatic operations	
+	//cast shmid to char type for pointer arithmatic operations
+	char *str = (char *)shmid;	
 	
-	//Make semaphore set //FIXME: Change semnum to argv*2+1 
+	//Make semaphore set 
         if ((semid = initsem(SEMKEY,3)) == -1) { //Make 3 semaphores, mutex, full, empty
                 perror("initsem");
                 exit(1);
 	}
-	//Set sem full to 16 and empty to 0 //FIXME: for loop to modify all, SEM_FULL and SEM_EMPTY will no longer be valid
+	//Set sem full to 16 and empty to 0
 	arg.val = BUFFER_SIZE;
 	if ((semctl(semid, SEM_FULL, SETVAL, arg)) == -1) {
 		perror("semctl");
@@ -180,10 +183,9 @@ int main()
 	else if(pid==0) {
 		printf("The producer is started.\n");
 		char temp_buf[100];	
-		char write_msg[1];
 		int r = 0;		//read index
 		int w = 0;		//write index
-		int shmW = 0;
+		int shmW = 0;		//Shared memory write index
 		system("/bin/stty raw -echo icrnl"); //modify terminal behavior
 		while(1){
 		//int semval = semctl(semid, SEM_FULL, GETVAL);  //for troubleshooting
