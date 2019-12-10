@@ -43,9 +43,7 @@ int shm_fd;
 //prodThreadFun - Producer Thread Function
 //*******************************************************************
 void *prodThreadFun(void* arg) {
-  printf("Producer Thread %d Started\n", (int)pthread_self()); //REMOVE BEFORE FLIGHT
 //Use semaphores to ensure each thread opens a unique file
-
   if(sem_wait(mutex)!=0){
     perror("sem_wait -p");
   }
@@ -59,7 +57,6 @@ void *prodThreadFun(void* arg) {
     perror("fopen -p");
     pthread_exit(NULL);
   }
-  printf("Tread %d grabbed file %s\n", (int)pthread_self(), fileName); //REMOVE BEFORE FLIGHT
   *(int*)arg += 1;
   if(sem_post(mutex)!=0){
     perror("sem_post -p");
@@ -69,7 +66,6 @@ void *prodThreadFun(void* arg) {
     *(int*)arg = 0;
   }
   pthread_barrier_wait(&prod_barrier);
-  
   char readChar;
   while(readChar!=EOF) {
     readChar = fgetc(fd);
@@ -81,15 +77,12 @@ void *prodThreadFun(void* arg) {
     sem_post(semEmpty);
     pthread_barrier_wait(&prod_barrier);
   }
- 
   pthread_exit(NULL);
-
 }
 //*******************************************************************
 //conThreadFun - Consumer Thread Function
 //*******************************************************************
 void *conThreadFun(void* arg) {
-  printf("Consumer Thread %d Started\n", (int)pthread_self()); //REMOVE BEFORE FLIGHT
 //Use semaphores to ensure each thread opens a unique file
   if(sem_wait(mutex)!=0){
     perror("sem_wait -c");
@@ -104,7 +97,6 @@ void *conThreadFun(void* arg) {
     perror("fopen -p");
     pthread_exit(NULL);
   }
-  printf("Thread %d grabbed file %s\n", (int)pthread_self(), fileName); //REMOVE BEFORE FLIGHT
   *(int*)arg += 1;
   if(sem_post(mutex)!=0){
     perror("sem_post -p");
@@ -114,7 +106,6 @@ void *conThreadFun(void* arg) {
     *(int*)arg = 0;
   }
   pthread_barrier_wait(&con_barrier);
-
   char writeChar;
   while(1) {
     sem_wait(semEmpty);
@@ -129,7 +120,6 @@ void *conThreadFun(void* arg) {
     }
     fprintf(fd, "%c", writeChar);
   }
-
   pthread_exit(NULL);
 }
 //*******************************************************************
@@ -138,7 +128,6 @@ void *conThreadFun(void* arg) {
 int Producer() {
 //Declare variables
   int count = 1;//keep count of how many files have been opened
-  printf("The producer has started\n");//REMOVE BEFORE FLIGHT
 //Declare and instantiate pthread barrier  
   if((pthread_barrier_init(&prod_barrier,NULL,THREAD_COUNT)) != 0) {
     perror("pthread_barrier -p");
@@ -156,15 +145,12 @@ int Producer() {
       exit(1);
     }
   }
-//***troubleshooting - delete in final version
-  printf("Producer threads created\n");
 //Join pthreads
   for(int i = 0; i < THREAD_COUNT; i++) {
     if((pthread_join(prod_thread[i], NULL)) != 0) {
       perror("pthread_join -p");
     }
   }
-  printf("Producer threads joined\n");
 //Destroy pthread barrier
   if((pthread_barrier_destroy(&prod_barrier)) != 0) {
     perror("pthread_barrier_destroy -p");
@@ -176,7 +162,6 @@ int Producer() {
 //*******************************************************************
 int Consumer() {
   int count = 1;
-  printf("The consumer has started\n");
 //Declare and instantiate pthread barrier  
   if((pthread_barrier_init(&con_barrier, NULL,THREAD_COUNT)) != 0) {
     perror("pthread_barrier -c");
@@ -193,14 +178,12 @@ int Consumer() {
       exit(1);
     }
   }
-  printf("Consumer threads created\n");
 //Join pthreads
   for(int i = 0; i < THREAD_COUNT; i++) {
     if((pthread_join(con_thread[i], NULL)) != 0) {
       perror("pthread_join -c");
     }
   }
-  printf("Consumer threads joined\n");
 //Destroy pthread barrier
   if((pthread_barrier_destroy(&con_barrier)) != 0) {
     perror("pthread_barrier_destroy -c");
@@ -213,8 +196,6 @@ int Consumer() {
 int main() {
   pid_t pid[2];
   int stat;
-  
-
 //Instantiate semaphores
   if((mutex = sem_open(SEM_MUTEX, O_CREAT, 0666, 1)) == SEM_FAILED) {
     perror("sem_open mutex");
@@ -231,7 +212,6 @@ int main() {
     sem_close(semEmpty);
     exit(1);
   }
-
 //Instantiate shared memory
   if((shm_fd = shm_open(fileName, O_CREAT | O_RDWR, 0666)) == -1) {
     perror("shm_open");
@@ -313,6 +293,6 @@ int main() {
     perror("shm_unlink");
     exit(1);
   }
-
+  printf("Your file's contents have been suffled. Have a nice day.\n")
 return 0;
 }
