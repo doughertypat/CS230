@@ -50,7 +50,7 @@ int* merge(int *A, int *B){
 }
 
 
-
+/*
 //Driver code to test functions.  REMOVE BEFORE USING THIS FILE!
 int main(void){
   int length = 4;
@@ -69,3 +69,4 @@ int main(void){
   printf("\n");
   return 0;
 }
+*/
