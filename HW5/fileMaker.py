@@ -13,7 +13,7 @@ overlapping numbers.
 """ 
 
 fileNum = 5;
-itemNum = 10000;
+itemNum = 9999;
 
 for i in range(1,fileNum+1):
 	fileName = "Prod%d.txt" % i

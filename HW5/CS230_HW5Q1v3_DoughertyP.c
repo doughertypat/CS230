@@ -293,6 +293,6 @@ int main() {
     perror("shm_unlink");
     exit(1);
   }
-  printf("Your file's contents have been suffled. Have a nice day.\n")
+  printf("Your file's contents have been suffled. Have a nice day.\n");
 return 0;
 }
