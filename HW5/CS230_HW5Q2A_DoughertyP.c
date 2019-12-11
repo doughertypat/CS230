@@ -9,7 +9,9 @@ patrick.r.dougherty@und.edu
 #include <stdlib.h>
 #include <time.h>
 
-
+//*******************************************************************
+// randomListGen - Returns an array or randomly generated integers
+//*******************************************************************
 int* randomListGen(int length){
   time_t t;
   int *randList;
@@ -20,14 +22,16 @@ int* randomListGen(int length){
   }
   return randList;
 }
-
-int* merge(int *A, int *B){
+//*******************************************************************
+// merge - merges to array keeping values in increasing order.
+//	   Input arrays must already in increasing order.
+//*******************************************************************
+int* merge(int *A, int *B, int size){
   int *C;
-  int n1 = (sizeof(A)/sizeof(int));
-  int n2 = (sizeof(B)/sizeof(int));
-  C = (int*)malloc((n1+n2)*sizeof(int));
+  int n1 = size/2;
+  int n2 = size-n1;
+  C = (int*)malloc(size*sizeof(int));
   int i=0, j=0;
-  printf("n1: %d, n2: %d\n", n1, n2);
   while(i<n1 && j<n2){
     if (A[i]<=B[j]){
       C[i+j] = A[i];
